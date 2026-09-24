@@ -397,3 +397,34 @@ def run_colocalization(name, adata, g=None, wave_gene=WAVE_GENE, layer=LAYER,
 
 
     return out
+
+
+def orient_samples(adata, transforms, basis="spatial", sample_key="sample"):
+    """Mirror / rotate individual samples around their own centre.
+
+    transforms: {sample: {"flip": "x" | "y" | "xy" | None, "rotate": degrees}}
+      flip "x" = mirror left-right, "y" = mirror up-down; rotate is counter-clockwise, applied after the flip.
+    The original coordinates are kept in obsm[f"{basis}_orig"], and every call starts from them,
+    so re-running the cell does not stack transformations.
+    """
+    orig = f"{basis}_orig"
+    if orig not in adata.obsm:
+        adata.obsm[orig] = adata.obsm[basis].copy()
+    xy = np.asarray(adata.obsm[orig], dtype=float).copy()
+
+    for smp, t in transforms.items():
+        m = (adata.obs[sample_key] == smp).to_numpy()
+        assert m.any(), f"sample {smp!r} not found in obs[{sample_key!r}]"
+        c = xy[m, :2].mean(axis=0)
+        p = xy[m, :2] - c
+        flip = t.get("flip") or ""
+        if "x" in flip:
+            p[:, 0] *= -1
+        if "y" in flip:
+            p[:, 1] *= -1
+        a = np.deg2rad(t.get("rotate", 0))
+        R = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]])
+        xy[m, :2] = p @ R.T + c
+
+    adata.obsm[basis] = xy
+    return adata

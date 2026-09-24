@@ -21,3 +21,10 @@ preprocessed_figdir = preprocessed_dir / "figures" / "00_preprocess"
 # 07_instant_ST_analysis
 instant_dir = project_root / "results" / "07_instant"
 instant_figdir = project_root / "figures" / "07_instant"
+
+## 04_PAGA
+paga_dir = project_root / "data" / "04_PAGA"
+
+
+## 08 stlearn
+stlearn_dir = project_root / "data" / "08_stlearn"
