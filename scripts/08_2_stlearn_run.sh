@@ -2,8 +2,9 @@
 # Run 08_2_stlearn_run.py (grid mode) for every sample, one process + log per sample.
 # Usage: bash 08_2_stlearn_run.sh [sample ...]   (no args = all <sample>.h5ad in IN_DIR)
 set -uo pipefail
-SCRIPT_DIR=/mnt/scratch/sevcoviz/proj_2026_Zimcik_Xenium/scripts
 BASE=/mnt/scratch/sevcoviz/proj_2026_Zimcik_Xenium
+
+SCRIPT_DIR=$BASE/proj_2026_Zimcik_Xenium/scripts
 IN_DIR=$BASE/data/08_stlearn
 OUT_DIR=$BASE/data/08_stlearn/cci
 FIG_DIR=$BASE/figures/08_stlearn

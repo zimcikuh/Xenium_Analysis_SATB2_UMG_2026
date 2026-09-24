@@ -1,18 +1,4 @@
 #08_2_stlearn_run
-"""
-Run stLearn cell-cell interaction (CCI) analysis on one or more samples.
-
-Example:
-    python 08_2_stlearn_run.py \
-        --samples wt_1 wt_2 wt_4 \
-        --database connectomeDB2020_lit \
-        --input-dir /mnt/scratch/sevcoviz/proj_2026_Zimcik_Xenium/data/08_stlearn \
-        --output-dir /mnt/scratch/sevcoviz/proj_2026_Zimcik_Xenium/data/08_stlearn/cci \
-        --fig-dir /mnt/scratch/sevcoviz/proj_2026_Zimcik_Xenium/figures/08_stlearn \
-        --min-spots 20 --distance 30 --n-pairs 10000 --n-cpus 16 \
-        --annotation annotation --cci-min-spots 5 --n-perms 1000
-"""
-
 import argparse
 import re
 from pathlib import Path
