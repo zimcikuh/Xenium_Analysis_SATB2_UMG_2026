@@ -3,8 +3,10 @@ Xenium analysis of lower jaws of SATB2 wt and mut. Focused on developmental ares
 
 Planned features:
 
+Save marmaid flowchart of the analysis pipeline: npx -p @mermaid-js/mermaid-cli mmdc -i .\Xenium_Analysis_SATB2_UMG_2026\README.md -o pipeline.png -s 3 -b white
+
 ```mermaid
-flowchart TD
+flowchart LR
     A[input data] --> B[Processing]
     Z[xenium_roi.rds] --> DBScan[DBSCAN - per sample] --> A
     Y[transcripts.parquet] --> Proseg[PROSEG probabilistic segmentation] --> A
@@ -13,11 +15,9 @@ flowchart TD
     
     C --> X["min_counts = 20 (min transcripts/cell)<br/>min_features = 10 (min genes/cell)<br/>max_pct_neg = 5% (max negative controls)<br/>min_cells = 10 (keep genes in >= 10 cells)"]
 
-    C --> D[Normalization]
+    X --> D[Normalization]
 
-    D --> SCTransfrom_R --> EndPreprocessing
-
-    B --> EndPreprocessing
+    D --> EndPreprocessing
 
     EndPreprocessing --> PrimaryAnalysis
 
@@ -26,20 +26,28 @@ flowchart TD
     E --> F[PCA / UMAP]
     F --> G[Leiden / Luivan clustering] 
 
-    G --> K[Manual cell type annotation]
+    EndPreprocessing --> K[Manual cell type annotation]
+    K --> Notebook02[20_vizual_refined_annot.ipynb]
 
     EndPreprocessing --> H[SpatialDE -- Moran's I, Wilcox test, RankBiserial correlation]
 
     H --> Spatial[Spatial domains]
+    Spatial --> Notebook03[03_Morans_I.ipynb]
 
     EndPreprocessing --> I[segmentation free analysis] 
     I --> Ficture
     I --> Colocalization
+    Colocalization --> Notebook05[07_instant_ST_analysis.ipynb]
 
-    K --> L[Cell to cell communication -- CellChat, CellPhoneDB, NicheNet, stLearn]
+    Colocalization --> Notebook06[TODO: 07_1_colocalization_broad.ipynb]
+
+    K --> L[Cell to cell communication -- stLearn algorithm; Database used: CellChatDB.mouse, connectomeDB2020_lit]
+
+    L --> Notebook01[Pipeline: 08_2_stlearn_run.py; Run on all samples: 08_2_stlearn_run.sh; Vizualization of results: 08_2_stlearn_vizual.ipynb]
 
     EndPreprocessing --> PAGA
     PAGA --> P[Trajectory inference -- PAGA, potential differentiation paths]
+    P --> Notebook04[04_PAGA.ipynb]
 
 ```
 
