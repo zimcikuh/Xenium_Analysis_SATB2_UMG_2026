@@ -5,6 +5,36 @@ from typing import Optional
 import scipy.sparse as sp
 import scanpy as sc
 
+def qc_table(adata, sdatas):
+    adata = adata.copy()
+    neg_prefixes = ("NegControl", "UnassignedCodeword", "BLANK", "Intergenic", "Deprecated")
+    adata.var["neg_ctrl"] = adata.var_names.str.startswith(neg_prefixes)
+    sc.pp.calculate_qc_metrics(adata, qc_vars=["neg_ctrl"], percent_top=None, log1p=False, inplace=True)
+    adata.obs["counts_per_um3"] = adata.obs["total_counts"] / adata.obs["volume"]
+
+    g = adata.obs.groupby("sample", observed=True)
+    qc = pd.DataFrame({
+        "n_cells":               g.size(),
+        "transcripts_in_cells":  g["total_counts"].sum().round(0),
+        "median_counts/cell":    g["total_counts"].median(),
+        "mean_counts/cell":      g["total_counts"].mean(),
+        "median_genes/cell":     g["n_genes_by_counts"].median(),
+        "mean_genes/cell":       g["n_genes_by_counts"].mean(),
+        "median_pct_neg_ctrl":   g["pct_counts_neg_ctrl"].median(),
+        "median_volume_um3":     g["volume"].median(),
+        "median_surface_um2":    g["surface_area"].median(),
+        "median_counts/um3":     g["counts_per_um3"].median(),
+        "pct_cells_<20_counts":  g["total_counts"].apply(lambda x: (x < 20).mean() * 100),
+        "pct_cells_<10_genes":   g["n_genes_by_counts"].apply(lambda x: (x < 10).mean() * 100),
+    })
+    qc["genes_detected"] = [
+        int((np.asarray(adata[adata.obs["sample"] == s].X.sum(axis=0)).ravel() > 0).sum())
+        for s in qc.index
+    ]
+    qc["total_transcripts"] = [len(sdatas[s].points["transcripts"]) for s in qc.index]
+    qc["pct_assigned_to_cells"] = qc["transcripts_in_cells"] / qc["total_transcripts"] * 100
+    return qc.round(2)
+
 
 def adata_preprocessing(
     adata: ad.AnnData,
@@ -428,3 +458,42 @@ def orient_samples(adata, transforms, basis="spatial", sample_key="sample"):
 
     adata.obsm[basis] = xy
     return adata
+
+def orient_sdata(sdata, flip=None, rotate=0, elements=("cell_boundaries",), cs="global"):
+    """Mirror/rotate SpatialData elements around the tissue centre (non-destructive).
+    flip: "x" (left-right), "y" (up-down), "xy" or None; rotate: degrees, applied after flip.
+    Each call replaces the previous transform, so re-running doesn't stack."""
+    minx, miny, maxx, maxy = sdata.shapes[elements[0]].total_bounds
+    c = np.array([(minx + maxx) / 2, (miny + maxy) / 2])
+
+    F = np.diag([-1 if flip and "x" in flip else 1,
+                 -1 if flip and "y" in flip else 1])
+    a = np.deg2rad(rotate)
+    R = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]]) @ F
+    t = c - R @ c                                   # keep the tissue centred in place
+
+    M = np.array([[R[0, 0], R[0, 1], t[0]],
+                  [R[1, 0], R[1, 1], t[1]],
+                  [0, 0, 1]])
+    for el in elements:
+        set_transformation(sdata[el], Affine(M, input_axes=("x", "y"), output_axes=("x", "y")),
+                           to_coordinate_system=cs)
+
+from spatialdata import SpatialData, bounding_box_query
+
+PIXEL_SIZE_UM = 0.2125                  # Xenium full-res pixel size (µm / px)
+MORPH_SCALE   = 1.0 / PIXEL_SIZE_UM     # 4.70588…  micron -> pixel factor
+def crop(sdata, crop_um, units="pixels", scale=MORPH_SCALE, target="global"):
+    """Bounding-box crop from a window given in MICRONS.
+
+    units="pixels"  -> multiply by `scale` (use when target global is the pixel grid:
+                       the morphology overlay, the Xenium bundle/zarr).
+    units="microns" -> use as-is (use when target global is micron/Identity: sdata_comb).
+    """
+    f = scale if units == "pixels" else 1.0
+    return bounding_box_query(
+        sdata, axes=("x", "y"),
+        min_coordinate=[crop_um["x_min"] * f, crop_um["y_min"] * f],
+        max_coordinate=[crop_um["x_max"] * f, crop_um["y_max"] * f],
+        target_coordinate_system=target,
+    )
