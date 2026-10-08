@@ -1,6 +1,6 @@
 from pathlib import Path
 
-project_root = Path(r"C:\Users\sevco\Documents\phd\proj_2026_Zimcik_Xenium\Xenium_Analysis_SATB2_UMG_2026")
+project_root = Path(__file__).resolve().parents[2]   # <project>/scripts/utils/paths.py -> <project>, works on any machine
 
 
 # RAW DATA
@@ -17,6 +17,9 @@ proseg_dir = project_root / "data_raw" / "proseg_out"
 # 00_preprocess
 preprocessed_dir = project_root / "data" / "00_preprocess"
 preprocessed_figdir = preprocessed_dir / "figures" / "00_preprocess"
+
+# 03_Morans_I
+morans_dir = project_root / "results" / "03_Morans_I"
 
 # 07_instant_ST_analysis
 instant_dir = project_root / "results" / "07_instant"

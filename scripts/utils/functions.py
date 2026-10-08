@@ -479,7 +479,30 @@ def orient_sdata(sdata, flip=None, rotate=0, elements=("cell_boundaries",), cs="
         set_transformation(sdata[el], Affine(M, input_axes=("x", "y"), output_axes=("x", "y")),
                            to_coordinate_system=cs)
 
-from spatialdata import SpatialData, bounding_box_query
+from spatialdata import SpatialData, bounding_box_query, get_extent
+from spatialdata.transformations import Affine, set_transformation
+
+
+def common_span(sdatas, samples, element="cell_boundaries", cs="global", margin=0.02):
+    """Largest tissue width/height (µm) over `samples`; pass it to same_scale for every panel."""
+    ext = [get_extent(sdatas[s], elements=[element], coordinate_system=cs) for s in samples]
+    w = max(e["x"][1] - e["x"][0] for e in ext)
+    h = max(e["y"][1] - e["y"][0] for e in ext)
+    return w * (1 + margin), h * (1 + margin)
+
+
+def same_scale(ax, sdata, span, element="cell_boundaries", cs="global", bar_room=0.08):
+    """Show a window of fixed size `span` (µm) centred on the tissue, so every panel has the same
+    µm-per-inch and a 100 µm scale bar has the same length everywhere (panels must be equally sized).
+    bar_room: extra space below the tissue (fraction of the height) for the scale bar."""
+    e = get_extent(sdata, elements=[element], coordinate_system=cs)
+    cx, cy = np.mean(e["x"]), np.mean(e["y"])
+    w, h = span
+    y0, y1 = ax.get_ylim()
+    down = 1 if y0 > y1 else -1                     # spatialdata_plot draws y pointing down (image coords)
+    ax.set_xlim(cx - w / 2, cx + w / 2)
+    ax.set_ylim(cy + down * (h / 2 + bar_room * h), cy - down * h / 2)
+    ax.set_aspect("equal")
 
 PIXEL_SIZE_UM = 0.2125                  # Xenium full-res pixel size (µm / px)
 MORPH_SCALE   = 1.0 / PIXEL_SIZE_UM     # 4.70588…  micron -> pixel factor
